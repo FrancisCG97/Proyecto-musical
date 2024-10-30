@@ -1,98 +1,74 @@
-// const http = require('http');
-// const url = require('url');
-// const iTunesController = require('./controllers/iTunesController');
-
-// const PORT = process.env.PORT || 5000;
-
-// const requestHandler = async (req, res) => {
-//     const parsedUrl = url.parse(req.url, true);
-
-//     // Configuración de CORS
-//     res.setHeader('Access-Control-Allow-Origin', '*');
-//     res.setHeader('Access-Control-Allow-Methods', 'GET');
-//     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-//     // Log para depurar
-//     console.log('Request received:', req.method, parsedUrl.pathname);
-
-//     // Ruta para buscar en iTunes
-//     if (parsedUrl.pathname === '/api/itunes/search' && req.method === 'GET') {
-//         const term = parsedUrl.query.term;
-//         console.log('Search term:', term);
-//         try {
-//             const data = await iTunesController.search(term);
-//             const top = data.slice(0, 24);
-//             console.log('Data fetched successfully');
-//             res.writeHead(200, { 'Content-Type': 'application/json' });
-//             res.end(JSON.stringify(top));
-//         } catch (error) {
-//             console.error('Error fetching data from iTunes API:', error);
-//             res.writeHead(500, { 'Content-Type': 'application/json' });
-//             res.end(JSON.stringify({ message: 'Error fetching data from iTunes API', error: error.message }));
-//         }
-//     } else {
-//         res.writeHead(404, { 'Content-Type': 'text/plain' });
-//         res.end('Not Found');
-//     }
-// };
-
-// // Crear el servidor HTTP
-// const server = http.createServer(requestHandler);
-
-// // Iniciar el servidor
-// server.listen(PORT, () => {
-//     console.log(`Server running on port ${PORT}`);
-// });
-
-
 const http = require('http');
 const url = require('url');
 const iTunesController = require('./controllers/iTunesController');
 
 const PORT = process.env.PORT || 5000;
-const cache = {};
-const CACHE_EXPIRATION = 3600 * 1000; // 3600 segundos en milisegundos
-
-const getCachedData = (term) => {
-    const cached = cache[term];
-    if (cached && (Date.now() - cached.timestamp < CACHE_EXPIRATION)) {
-        console.log('Returning cached data for term:', term);
-        return cached.data;
-    }
-    return null;
-};
-
-const setCachedData = (term, data) => {
-    cache[term] = {
-        data,
-        timestamp: Date.now()
-    };
-};
+const favoritos = []; 
 
 const requestHandler = async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
-
+    
     // Configuración de CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     // Log para depurar
     console.log('Request received:', req.method, parsedUrl.pathname);
 
+    // Ruta para marcar canción como favorita
+    if (parsedUrl.pathname === '/favoritos' && req.method === 'POST') {
+        let body = '';
+
+        // Leer los datos de la solicitud
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
+
+        req.on('end', () => {
+            // Parsear JSON del cuerpo
+            const { nombre_banda, cancion_id, usuario, ranking } = JSON.parse(body);
+
+            // Validación de datos
+            if (!nombre_banda || !cancion_id || !usuario || !ranking) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'Todos los campos son obligatorios.' }));
+            }
+
+            if (typeof cancion_id !== 'number') {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'cancion_id debe ser un número.' }));
+            }
+
+            if (!/^\d+\/\d+$/.test(ranking)) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'Ranking debe estar en formato x/x.' }));
+            }
+
+            // Verificar si la canción y la banda existen en el caché (sin caché)
+            const cancionExiste = favoritos.some(cancion =>
+                cancion.cancion_id === cancion_id && cancion.nombre_banda.includes(nombre_banda)
+            );
+
+            if (!cancionExiste) {
+                res.writeHead(404, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: 'La banda o la canción no existe.' }));
+            }
+
+            // Almacenar la canción en favoritos
+            favoritos.push({ nombre_banda, cancion_id, usuario, ranking });
+            console.log('Canción añadida a favoritos:', { nombre_banda, cancion_id, usuario, ranking });
+
+            res.writeHead(201, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ mensaje: 'Canción marcada como favorita correctamente.' }));
+        });
+
     // Ruta para buscar en iTunes
-    if (parsedUrl.pathname === '/api/itunes/search' && req.method === 'GET') {
+    } else if (parsedUrl.pathname === '/api/itunes/search' && req.method === 'GET') {
         const term = parsedUrl.query.term;
         console.log('Search term:', term);
 
-        // Verificar si los datos están en caché
-        const cachedData = getCachedData(term);
-        if (cachedData) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify(cachedData));
-        }
-
-        // Si no están en caché, realizar la solicitud a iTunes API
+        // Realizar la solicitud a iTunes API
         try {
             const data = await iTunesController.search(term);
 
@@ -117,10 +93,10 @@ const requestHandler = async (req, res) => {
                 canciones: canciones
             };
 
-            // Almacenar en caché la respuesta formateada
-            setCachedData(term, respuestaFormateada);
+            // Imprimir la respuesta formateada en consola
+            console.log('Response structure:', JSON.stringify(respuestaFormateada, null, 2));
 
-            console.log('Data fetched and cached successfully');
+            // Enviar respuesta al cliente
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(respuestaFormateada));
         } catch (error) {

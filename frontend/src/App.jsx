@@ -84,11 +84,15 @@
 
 
 import React, { useState } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
     const [term, setTerm] = useState('');
     const [results, setResults] = useState([]);
+
+    const notify = () => toast("Añadido a favoritos!");
 
     const handleSearch = async () => {
         try {
@@ -108,13 +112,50 @@ function App() {
         }
     };
 
+    const guardarCancion = async (item) => {
+        const { cancion_id, nombre_album } = item; // Asegúrate de que estos campos están en `item`
+        const ranking = '5/10'; // Define tu lógica para el ranking, si es necesario
+        const usuario = 'usuarioEjemplo'; // Obtén el usuario según tu lógica
+
+        const body = JSON.stringify({
+            cancion_id: Number(cancion_id),
+            nombre_banda: nombre_album,
+            ranking: ranking,
+            usuario: usuario
+        });
+
+        try {
+            const response = await fetch('http://localhost:5000/favoritos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: body
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al guardar la canción');
+            }
+
+            const data = await response.json();
+            alert(data.mensaje || 'Canción guardada correctamente.');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Hubo un problema al guardar la canción. Detalles: ' + error.message);
+        }
+    };
+
+
+
     return (
         <>
             <div className="container">
                 <div className="principal">
+                    <ToastContainer
+                        autoClose={3000} />
                     <h1 className="text-center">Búsqueda musical</h1>
-                    <div className="row justify-content-center">
-                        <div className="col-12 col-md-8 col-lg-10">
+                    <div className="row">
+                        <div className="col-12 col-md-12 col-lg-12">
                             <div className="input-group">
                                 <input
                                     type="text"
@@ -123,7 +164,7 @@ function App() {
                                     placeholder="Ingrese el nombre de un artista o banda"
                                 />
                                 <button
-                                    className="btn btn-outline-primary"
+                                    className="btn btn-outline-secondary"
                                     onClick={handleSearch}
                                     type="button"
                                     id="button-addon2"
@@ -140,6 +181,7 @@ function App() {
                             <table className="table table-bordered table-hover">
                                 <thead className="table">
                                     <tr>
+                                        <th></th>
                                         <th>Nombre de la canción</th>
                                         <th>Nombre del disco</th>
                                         <th>Url preview</th>
@@ -150,6 +192,18 @@ function App() {
                                 <tbody>
                                     {results.map((item, index) => (
                                         <tr key={index}>
+                                            <td>
+                                                <button
+                                                    type="button"
+                                                    className="btn"
+                                                    onClick={() => guardarCancion(item)}
+                                                    data-cancion-id={item.cancion_id} // Asumiendo que `cancion_id` está presente en el objeto
+                                                    data-nombre-banda={item.nombre_album} // Usando el nombre del álbum como banda
+                                                    data-ranking="5/10" // Cambia esto si tienes un ranking dinámico
+                                                >
+                                                    ❤️
+                                                </button>
+                                            </td>
                                             <td>{item.nombre_tema}</td>
                                             <td>{item.nombre_album}</td>
                                             <td><a href={item.preview_url} target="_blank" rel="noopener noreferrer">Preview</a></td>
@@ -166,6 +220,7 @@ function App() {
                         </div>
                     )}
                 </div>
+
             </div>
 
         </>

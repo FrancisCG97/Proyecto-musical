@@ -1,32 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+
 :root {
-  background-color: chocolate;
+  /* background-color: #E6E6FA; */
+}
+
+html {
+  /* background-color: #E6E6FA; */
 }
 
 .principal h1 {
   color: #6a0dad; /* Morado oscuro */
+  /* background-color: #E6E6FA; */
+  font-family: 'Roboto Mono', monospace;
+  margin: 0%;
+  padding: 3%;
 }
 
 /* Fondo de color lavanda para toda la página */
 body {
-  background-color: #E6E6FA; /* Color lavanda */
-  margin: 0;
+  /* background-color: #E6E6FA;  */
+
   font-family: Arial, sans-serif;
 }
+
+table {
+  border-color: 10px solid #6a0dad;
+}
+
 
 /* Ajustes adicionales para centrar el contenido */
 .container {
-  padding: 20px;
-  background-color: #E6E6FA; /* Color lavanda */
-  margin: 0;
+  /* padding: 20px; */
+  /* background-color: #E6E6FA; */
+  margin-left: 0%;
+  margin-right: 0%;
   font-family: Arial, sans-serif;
-}
-table {
-  background-color: blueviolet;
 }
 
 .input-group {
-  margin-top: 10%;
-  margin-bottom: 10%;
+  margin: 10% 0%;
+  /* background-color: #E6E6FA; */
 } 
 
 .principal {
@@ -34,5 +47,6 @@ table {
   justify-content: center;
   flex-direction: column;
   align-items: center;
-  /* background-color: chocolate; */
+  margin-left: 0%;
+  margin-right: 0%;
 }
